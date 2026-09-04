@@ -53,3 +53,6 @@ knowledge/docs/item_names.txt
 
 # Local docs (not committed to git)
 .git_filter_rules
+
+# Local project docs (sensitive / planning files)
+import/
