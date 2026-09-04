@@ -39,28 +39,75 @@ class _LLMClientWrapper:
         return getattr(self._client, name)
 
 
+def _detect_provider(api_base: str) -> str:
+    """根据 API base URL 自动识别提供商。"""
+    base = api_base.lower()
+    if "dashscope" in base:
+        return "dashscope"
+    if "deepseek" in base:
+        return "deepseek"
+    if "openai.com" in base:
+        return "openai"
+    if "zhipuai" in base:
+        return "zhipu"
+    if "api.stepfun" in base:
+        return "stepfun"
+    return "custom"
+
+
+def _default_model_for(provider: str) -> str:
+    """根据提供商返回默认模型名。"""
+    return {
+        "dashscope": "qwen-plus",
+        "deepseek": "deepseek-chat",
+        "openai": "gpt-4o",
+        "zhipu": "glm-4-flash",
+        "stepfun": "step-2-16k",
+    }.get(provider, "qwen-plus")
+
+
 def get_llm_client(mode_name: str = None, temperature: float = 0.0, response_format: bool = False):
     """
-
     Returns: 返回LLM客户端对象
-    # 自己加的提供:dashscope
-    # 兼容OpenAI: LangChain LangGraph(集成OpenAI)
     缓存的对象是：client
     缓存的key: 不同的节点用不同的模型以及同一个节点用不同响应格式
+
+    配置来源（按优先级）:
+      - mode_name 参数 → 最高优先级
+      - .env 中 LLM_MODEL / ITEM_MODEL → 根据 API base 自动匹配默认模型
+      - 根据 OPENAI_API_BASE 自动识别提供商:
+          dashscope → qwen-plus
+          deepseek  → deepseek-chat
+          openai    → gpt-4o
+          zhipuai   → glm-4-flash
+          stepfun   → step-2-16k
     """
 
-    # 1. 获取模型的名字
-    model_name = mode_name or os.getenv('ITEM_MODEL', "qwen-flash")
+    # 1. 从 .env 读取 API 配置（key 和 base 都必须存在，无 fallback）
+    api_base = os.getenv('OPENAI_API_BASE')
     api_key = os.getenv('OPENAI_API_KEY')
-    api_base = os.getenv('OPENAI_API_BASE', "https://dashscope.aliyuncs.com/compatible-mode/v1")
 
+    missing = []
+    if not api_base:
+        missing.append("OPENAI_API_BASE")
     if not api_key:
-        logger.error("缺少 OPENAI_API_KEY 环境变量，请在 .env 中配置")
+        missing.append("OPENAI_API_KEY")
+    if missing:
+        logger.error(f"缺少环境变量: {', '.join(missing)}，请在 .env 中配置")
         return None
 
-    cache_key = (mode_name, response_format)  # 复合缓存key(a,b)
+    # 2. 模型名优先级：mode_name > LLM_MODEL > ITEM_MODEL > 自动检测
+    provider = _detect_provider(api_base)
+    model_name = (
+        mode_name
+        or os.getenv('LLM_MODEL')
+        or os.getenv('ITEM_MODEL')
+        or _default_model_for(provider)
+    )
 
-    # 2. 缓存命中 直接返回（wrapper 可重复包裹，幂等）
+    cache_key = (mode_name, response_format)
+
+    # 3. 缓存命中 直接返回（wrapper 可重复包裹，幂等）
     if cache_key in cache_llm_client:
         return cache_llm_client[cache_key]
 
@@ -91,14 +138,11 @@ def get_llm_client(mode_name: str = None, temperature: float = 0.0, response_for
 
 
 if __name__ == '__main__':
-    llm_client = get_llm_client(mode_name="qwen-flash", response_format=False)
-
     import json
 
-    # ai_message = llm_client.invoke("你好，请问您是谁?")
-    # 使用本质发送请求（底层将model_kwargs的所有参数都在发送请求之前拼接到请求体身上）
-    ai_message = llm_client.invoke("您好，请给我讲一个笑话，返回json格式：{\"key\":\"value\"}")
-    print(ai_message.content)
-
-    # json对象 json字符串
-    json_object = json.loads(ai_message.content)
+    llm_client = get_llm_client()
+    if llm_client is None:
+        print("LLM 客户端初始化失败，请检查 .env 配置")
+    else:
+        ai_message = llm_client.invoke("你好，请问你是谁?")
+        print(ai_message.content)
