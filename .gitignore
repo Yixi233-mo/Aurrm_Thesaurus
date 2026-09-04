@@ -24,6 +24,7 @@ ENV/
 # Node
 node_modules/
 front/dist/
+knowledge/front/dist/
 
 # Logs & data
 logs/
@@ -40,12 +41,15 @@ libs/
 .DS_Store
 Thumbs.db
 
-# Test data
+# Test data (large fixtures)
 test/test_data/
 test/test_data/output/
+knowledge/test/test_data/
+knowledge/test/test_data/output/
 
 # Product name reference list (sensitive)
 docs/item_names.txt
+knowledge/docs/item_names.txt
 
 # Local docs (not committed to git)
 import/

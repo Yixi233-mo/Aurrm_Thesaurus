@@ -50,6 +50,8 @@ class QueryGraphState(TypedDict):
     kg_chunks: list
     kg_triples: list
     sources: list
+    intent: str                       # 意图分类结果：chat / web_search / rag
+    skip_retrieval: bool              # 是否跳过检索流程
 
 
 # ==================== 默认状态 ====================
@@ -70,8 +72,10 @@ DEFAULT_STATE: QueryGraphState = {
     "history": [],                  # 历史对话
     "is_stream": False,             # 是否流式输出
     "kg_chunks": [],                # 知识图谱切片
-    "kg_triples": [],                # 知识图谱关系
-    "sources": []                    # 回答来源（reranked docs 提取）
+    "kg_triples": [],               # 知识图谱关系
+    "sources": [],                  # 回答来源（reranked docs 提取）
+    "intent": "rag",                # 意图分类结果：chat / web_search / rag
+    "skip_retrieval": False,        # 是否跳过检索流程
 }
 
 

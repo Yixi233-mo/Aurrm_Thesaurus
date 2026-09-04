@@ -6,6 +6,8 @@ from knowledge.processor.query_process.nodes.web_search_mcp import WebSearchMcpN
 from knowledge.processor.query_process.nodes.rrf import RrfNode
 from knowledge.processor.query_process.nodes.rerank import RerankNode
 from knowledge.processor.query_process.nodes.answer_output import AnswerOutputNode
+from knowledge.processor.query_process.nodes.intent_router import IntentRouterNode
+from knowledge.processor.query_process.nodes.chat import ChatNode
 
 __all__ = [
     "ItemNameConfirmNode",
@@ -16,4 +18,6 @@ __all__ = [
     "RrfNode",
     "RerankNode",
     "AnswerOutputNode",
+    "IntentRouterNode",
+    "ChatNode",
 ]

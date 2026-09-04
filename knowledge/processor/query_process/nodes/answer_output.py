@@ -76,24 +76,36 @@ class AnswerOutputNode(BaseNode):
         question = state.get("rewritten_query") or state.get("original_query", "")
         item_names = state.get("item_names") or []
 
-        # 2. 格式化上下文文档
+        # 2. 格式化上下文文档（RAG 检索结果）
         context_str, char_budget = self._format_reranked_docs(
             state.get("reranked_docs") or [], char_budget
         )
 
-        # 3. 格式化历史对话
+        # 3. 格式化网络搜索结果（联网搜索时使用）
+        web_str, char_budget = self._format_web_docs(
+            state.get("web_search_docs") or [], char_budget
+        )
+
+        # 4. 合并上下文
+        combined_context = context_str or "无参考内容"
+        if web_str:
+            combined_context = (combined_context + "\n\n" + web_str).strip()
+            if combined_context == "无参考内容":
+                combined_context = web_str
+
+        # 5. 格式化历史对话
         history_str, char_budget = self._format_chat_history(
             state.get("history") or [], char_budget
         )
 
-        # 4. 格式化图谱关系
+        # 6. 格式化图谱关系
         graph_str, char_budget = self._format_kg_triples(
             state.get("kg_triples") or [], char_budget
         )
 
-        # 5. 组装提示词
+        # 7. 组装提示词
         return ANSWER_PROMPT.format(
-            context=context_str or "无参考内容",
+            context=combined_context,
             history=history_str if history_str else "暂无历史对话",
             item_names=", ".join(item_names) if item_names else "未识别到具体产品",
             graph_relation_description=graph_str or "无图谱关系",
@@ -161,6 +173,36 @@ class AnswerOutputNode(BaseNode):
             sources.append(source)
 
         self._last_sources = sources
+        return "\n\n".join(formatted_lines), char_budget - used_chars
+
+    @staticmethod
+    def _format_web_docs(web_docs: List[Dict], char_budget: int) -> Tuple[str, int]:
+        formatted_lines = []
+        used_chars = 0
+
+        for idx, doc in enumerate(web_docs, 1):
+            title = (doc.get("title") or "").strip()
+            snippet = (doc.get("snippet") or "").strip()
+            url = (doc.get("url") or "").strip()
+
+            if not snippet:
+                continue
+
+            entry_parts = [f"[Web {idx}]"]
+            if title:
+                entry_parts.append(f"[title={title}]")
+            if url:
+                entry_parts.append(f"[url={url}]")
+            entry_parts.append(f"[score={float(doc.get('score', 0)):.4f}]")
+
+            doc_entry = " ".join(entry_parts) + "\n" + snippet
+
+            if used_chars + len(doc_entry) > char_budget:
+                break
+
+            formatted_lines.append(doc_entry)
+            used_chars += len(doc_entry) + 2
+
         return "\n\n".join(formatted_lines), char_budget - used_chars
 
     @staticmethod

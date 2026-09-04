@@ -14,6 +14,8 @@ from knowledge.processor.query_process.state import (
     create_default_state
 )
 from knowledge.processor.query_process.nodes import (
+    IntentRouterNode,
+    ChatNode,
     ItemNameConfirmNode,
     SearchEmbeddingNode,
     SearchEmbeddingHydeNode,
@@ -41,6 +43,18 @@ def route_after_item_confirm(state: QueryGraphState) -> bool:
     return False
 
 
+def route_after_intent(state: QueryGraphState) -> str:
+    """意图分类后的路由逻辑。
+
+    Args:
+        state: 查询图状态。
+
+    Returns:
+        "chat" / "web_search" / "rag"
+    """
+    return state.get("intent", "rag")
+
+
 def create_query_graph() -> StateGraph:
     """创建查询流程图。
 
@@ -49,39 +63,48 @@ def create_query_graph() -> StateGraph:
 
     流程结构::
 
-        item_name_confirm
+        intent_router
               │
-              ├── (有答案) ──────────────────────────> answer_output
-              │                                              │
-              └── (无答案) ──> multi_search ─────┬──────────>│
-                                   │             │           │
-                         ┌─────────┼─────────────┼───────┐   │
-                         │         │             │       │   │
-                         v         v             v       v   │
-                   embedding  hyde_embedding  query_kg  web  │
-                         │         │             │       │   │
-                         └─────────┴─────────────┴───────┘   │
-                                       │                     │
-                                       v                     │
-                                     join                    │
-                                       │                     │
-                                       v                     │
-                                      rrf                    │
-                                       │                     │
-                                       v                     │
-                                    rerank                   │
-                                       │                     │
-                                       v                     │
-                               answer_output <───────────────┘
-                                       │
-                                       v
-                                      END
+        ┌─────┼─────┐
+        │     │     │
+        v     v     v
+      chat   web_search   rag
+        │       │         │
+        │       v         v
+        │  web_search_mcp  item_name_confirm
+        │       │              │
+        │       v              ├── (有答案) ─────────> answer_output
+        │   answer_output      └── (无答案) ──> multi_search ─┬──────────>│
+        │       │                                │             │           │
+        │       v                          ┌─────┼─────────────┼───────┐   │
+        │    (END)                          │     │             │       │   │
+        │                                  v     v             v       v   │
+        │                            embedding  hyde_embedding  query_kg  web(may)
+        │                                  │     │             │       │   │
+        │                                  └─────┴─────────────┴───────┘   │
+        │                                        │                     │   │
+        │                                        v                     │   │
+        │                                      join                    │   │
+        │                                        │                     │   │
+        │                                        v                     │   │
+        │                                       rrf                    │   │
+        │                                        │                     │   │
+        │                                        v                     │   │
+        │                                    rerank                   │   │
+        │                                        │                     │   │
+        │                                        v                     │   │
+        │                                answer_output <───────────────┘   │
+        │                                        │                         │
+        │                                        v                         │
+        │                                       (END) <───────────────────┘
     """
     # 1. 创建状态图
     workflow = StateGraph(QueryGraphState)
 
     # 2. 实例化节点
     nodes = {
+        "intent_router": IntentRouterNode(),
+        "chat": ChatNode(),
         "item_name_confirm": ItemNameConfirmNode(),
         "multi_search": lambda x: x,              # 多路搜索分发（虚节点）
         "search_embedding": SearchEmbeddingNode(),
@@ -99,9 +122,26 @@ def create_query_graph() -> StateGraph:
         workflow.add_node(name, node)
 
     # 4. 设置入口点
-    workflow.set_entry_point("item_name_confirm")
+    workflow.set_entry_point("intent_router")
 
-    # 5. 添加条件边：商品名称确认后根据是否有答案路由
+    # 5. 意图分类路由：chat / web_search / rag
+    workflow.add_conditional_edges(
+        "intent_router",
+        route_after_intent,
+        {
+            "chat": "chat",               # 闲聊 → 直接回复
+            "web_search": "web_search_mcp",  # 联网搜索 → 调用 MCP 搜索
+            "rag": "item_name_confirm",   # 知识库检索 → 商品名确认
+        }
+    )
+
+    # 6. 闲聊 → 答案输出
+    workflow.add_edge("chat", "answer_output")
+
+    # 7. 联网搜索 → 答案输出
+    workflow.add_edge("web_search_mcp", "answer_output")
+
+    # 8. 商品名称确认后根据是否有答案路由
     workflow.add_conditional_edges(
         "item_name_confirm",
         route_after_item_confirm,
@@ -111,19 +151,19 @@ def create_query_graph() -> StateGraph:
         }
     )
 
-    # 6. 多路搜索分发（并行执行）
+    # 9. 多路搜索分发（并行执行）
     workflow.add_edge("multi_search", "search_embedding")
     workflow.add_edge("multi_search", "search_embedding_hyde")
     workflow.add_edge("multi_search", "query_kg")
     workflow.add_edge("multi_search", "web_search_mcp")
 
-    # 7. 多路搜索汇合
+    # 10. 多路搜索汇合
     workflow.add_edge("search_embedding", "join")
     workflow.add_edge("search_embedding_hyde", "join")
     workflow.add_edge("query_kg", "join")
     workflow.add_edge("web_search_mcp", "join")
 
-    # 8. 顺序边
+    # 11. 顺序边
     workflow.add_edge("join", "rrf")
     workflow.add_edge("rrf", "rerank")
     workflow.add_edge("rerank", "answer_output")
