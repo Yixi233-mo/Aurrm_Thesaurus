@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- SEO & 分享 -->
+    <title>璇玑金策 · 金融知识库智能问答</title>
+    <meta name="description" content="璇玑金策 — 基于 RAG 与知识图谱的金融知识库智能问答系统，精准检索产品说明书、招募说明书、年报等金融文档。" />
+    <meta name="theme-color" content="#F7F3EE" />
+
+    <!-- 图标 -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
+    <!-- 字体预加载（首屏关键） -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap"
+    />
+
+    <!-- 首屏样式：亮色皮肤 + 加载过渡（防止白屏闪烁） -->
+    <style>
+      /* ===== 默认亮色皮肤（用户首选：砂金博弈 亮色） ===== */
+      html.light {
+        --skin-bg-base: #F7F3EE;
+        --skin-text-primary: #1A1A1A;
+        --skin-accent: #C49A6C;
+        --skin-accent-warm: #C49A6C;
+        --skin-sidebar-bg: #1A4A50;
+        --skin-sidebar-text: #E8E4D9;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background-color: #F7F3EE;
+        color: #1A1A1A;
+        font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* ===== 加载过渡屏 ===== */
+      #root:not(:empty) + .loading-screen,
+      .loading-screen.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .loading-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        background-color: #F7F3EE;
+        transition: opacity 1.5s ease-out;
+      }
+
+      .loading-logo {
+        position: relative;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* 同心圆环 */
+      .loading-logo::before,
+      .loading-logo::after {
+        content: "";
+        position: absolute;
+        border-radius: 50%;
+        border: 2px solid #C49A6C;
+      }
+
+      .loading-logo::before {
+        inset: 0;
+        opacity: 0.4;
+      }
+
+      .loading-logo::after {
+        inset: 8px;
+        opacity: 0.7;
+        border-width: 1.5px;
+      }
+
+      .loading-logo svg {
+        width: 22px;
+        height: 22px;
+        color: #C49A6C;
+      }
+
+      .loading-title {
+        font-family: "Playfair Display", ui-serif, Georgia, serif;
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #C49A6C;
+        letter-spacing: 0.08em;
+      }
+
+      .loading-subtitle {
+        font-size: 0.6875rem;
+        color: #6B6B6B;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+      }
+
+      /* 加载动画：柔和脉冲 */
+      @keyframes load-pulse {
+        0%,
+        100% {
+          opacity: 0.5;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.05);
+        }
+      }
+
+      .loading-logo {
+        animation: load-pulse 2s ease-in-out infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ===== 皮肤预加载脚本（同步执行，早于 React 渲染） ===== -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem("skin");
+          // 默认亮色皮肤（用户首选：砂金博弈 亮色）
+          if (saved === "skin-gambit-light") {
+            document.documentElement.classList.add("light");
+          } else if (saved === "skin-xuanji") {
+            document.documentElement.setAttribute("data-skin", "xuanji");
+          }
+          // saved === "skin-gambit-dark" 或未设置：使用 body 内联的亮色默认
+        } catch (e) { /* 静默降级 */ }
+      })();
+    </script>
+
+    <!-- ===== 加载过渡屏 ===== -->
+    <div class="loading-screen" id="loading-screen">
+      <div class="loading-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 4.168 6.253v13C4.168 19.223 5.754 19 7.5 19s3.332.477 3.332 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 3.332 1.253v13C19.832 19.223 18.247 19 16.5 19s-3.332.477-3.332 1.253" />
+        </svg>
+      </div>
+      <div class="loading-title">璇玑金策</div>
+      <div class="loading-subtitle">AURUM THESAURUS</div>
+    </div>
+
+    <!-- ===== React 挂载点 ===== -->
+    <div id="root"></div>
+
+    <!-- ===== 应用入口 ===== -->
+    <script type="module" src="/src/main.tsx"></script>
+
+    <!-- ===== 加载屏淡出（React 挂载后执行） ===== -->
+    <script>
+      (function () {
+        var screen = document.getElementById("loading-screen");
+        if (!screen) return;
+        // 等待 React 挂载
+        var check = setInterval(function () {
+          var root = document.getElementById("root");
+          if (root && root.children.length > 0) {
+            clearInterval(check);
+            screen.classList.add("fade-out");
+            // 过渡结束后移除
+            setTimeout(function () { screen.remove(); }, 500);
+          }
+        }, 100);
+        // 兜底：3 秒后强制隐藏
+        setTimeout(function () {
+          clearInterval(check);
+          screen.classList.add("fade-out");
+          setTimeout(function () { screen.remove(); }, 500);
+        }, 3000);
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,48 @@
+# IDE
+.idea/
+.vscode/
+
+# Claude Code
+.claude/
+
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+ENV/
+
+# Node
+node_modules/
+front/dist/
+
+# Logs & data
+logs/
+*.log
+data/
+data/uploads/
+data/cache/
+
+# Raw financial data (sensitive / large)
+金融/
+libs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test data
+test/test_data/
+test/test_data/output/
+
+# Product name reference list (sensitive)
+docs/item_names.txt
