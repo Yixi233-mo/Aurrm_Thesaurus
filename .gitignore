@@ -46,3 +46,6 @@ test/test_data/output/
 
 # Product name reference list (sensitive)
 docs/item_names.txt
+
+# Local docs (not committed to git)
+import/
