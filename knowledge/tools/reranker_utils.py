@@ -1,28 +1,58 @@
+"""Reranker 模型加载工具
+
+优先使用 pip 安装的 FlagEmbedding，仅在失败时回退到项目 libs/ 目录。
+这样即使 libs/ 目录不存在（gitignore），新环境也能正常加载模型。
+"""
 import os
 import sys
 import logging
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_LIBS_DIR = os.path.join(_PROJECT_ROOT, "libs")
-_user_site = os.path.join(os.environ.get("APPDATA", ""), "Python", "Python310", "site-packages")
-_has_user_site = any("Roaming" in p and "site-packages" in p for p in sys.path)
-
-if _has_user_site:
-    _saved_path = list(sys.path)
-    sys.path = [p for p in sys.path if not ("Roaming" in p and "site-packages" in p)]
-    try:
-        import pyarrow
-        import pyarrow.lib
-    except ImportError:
-        pass
-    if os.path.isdir(_LIBS_DIR):
-        sys.path.insert(0, _LIBS_DIR)
-
-from dotenv import load_dotenv
-
-from knowledge.core import env  # noqa: F401 - 加载项目根目录 .env
 logger = logging.getLogger(__name__)
 _reranker_model = None
+
+
+def _load_flag_embedding():
+    """加载 FlagEmbedding，优先 pip 安装，回退 libs/ 目录。"""
+    # 1. 优先使用 pip 安装的 FlagEmbedding（正常环境）
+    try:
+        from FlagEmbedding import FlagReranker
+        return FlagReranker
+    except ImportError:
+        logger.debug("pip FlagEmbedding 不可用，尝试 libs/ 回退")
+
+    # 2. 回退到项目 libs/ 目录
+    _LIBS_DIR = os.path.join(_PROJECT_ROOT, "libs")
+    if not os.path.isdir(_LIBS_DIR):
+        raise ImportError(
+            "FlagEmbedding 未安装且 libs/ 目录不存在。"
+            "请运行: pip install FlagEmbedding"
+        )
+
+    # 清理用户 site-packages 中可能不完整的旧安装
+    _user_site = os.path.join(os.environ.get("APPDATA", ""), "Python", "Python310", "site-packages")
+    _has_user_site = any("Roaming" in p and "site-packages" in p for p in sys.path)
+
+    if _has_user_site:
+        _saved_path = list(sys.path)
+        sys.path = [p for p in sys.path if not ("Roaming" in p and "site-packages" in p)]
+        try:
+            import pyarrow
+            import pyarrow.lib
+        except ImportError:
+            pass
+        sys.path.insert(0, _LIBS_DIR)
+    else:
+        sys.path.insert(0, _LIBS_DIR)
+
+    try:
+        from FlagEmbedding import FlagReranker
+        return FlagReranker
+    except ImportError:
+        # 恢复 sys.path
+        if _has_user_site:
+            sys.path = _saved_path
+        raise
 
 
 def get_reranker_model():
@@ -32,7 +62,7 @@ def get_reranker_model():
     global _reranker_model
     try:
         if _reranker_model is None:
-            from FlagEmbedding import FlagReranker
+            FlagReranker = _load_flag_embedding()
             model_path = os.getenv("BGE_RERANKER_LARGE")
             device = os.getenv("BGE_RERANKER_DEVICE", "cpu")
             use_fp16 = os.getenv("BGE_RERANKER_FP16", "False").lower() == "true"

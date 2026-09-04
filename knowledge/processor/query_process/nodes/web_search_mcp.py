@@ -58,8 +58,7 @@ class WebSearchMcpNode(BaseNode):
             return {"web_search_docs": docs}
         return {}
 
-    @staticmethod
-    def _parallel_search(query: str) -> List[Dict[str, Any]]:
+    def _parallel_search(self, query: str) -> List[Dict[str, Any]]:
         """调用 Parallel.ai MCP web_search 工具。"""
         from mcp import ClientSession
         from mcp.client.streamable_http import streamable_http_client
@@ -100,10 +99,11 @@ class WebSearchMcpNode(BaseNode):
                             snippet = excerpts[0] if excerpts else ""
                             if not snippet:
                                 continue
+                            # 统一使用 "content" 字段名，与下游 rerank 节点的本地文档保持一致
                             docs.append({
                                 "title": (item.get("title") or "").strip(),
                                 "url": (item.get("url") or "").strip(),
-                                "snippet": snippet.strip(),
+                                "content": snippet.strip(),
                             })
 
                     return docs
@@ -149,7 +149,7 @@ if __name__ == "__main__":
             print(f"\n共搜索到 {len(docs)} 条相关内容:")
             for i, doc in enumerate(docs, 1):
                 print(f"[{i}] {doc.get('title', '无标题')}")
-                print(f"    {doc.get('snippet', '')[:100]}...")
+                print(f"    {doc.get('content', '')[:100]}...")
                 print(f"    url: {doc.get('url', '')}")
     except Exception as e:
         print(f"\n执行失败: {e}")

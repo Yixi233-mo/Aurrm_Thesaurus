@@ -21,6 +21,11 @@ class RrfNode(BaseNode):
     def process(self, state: QueryGraphState) -> QueryGraphState:
         config = get_config()
 
+        # NOTE: web_search_docs 不参与 RRF 融合，原因如下：
+        #   1. Web 结果来自 Parallel.ai MCP，评分体系（relevance）与 Milvus 向量距离不兼容
+        #   2. Web 结果可能包含大量外部信息，混入 RRF 会稀释本地文档的排序权重
+        #   3. Web 结果已在 rerank 阶段与其他文档统一精排
+        # 因此 web_search_docs 直接传递到 rerank 节点，不经过 RRF。
         sources = {
             "embedding": (
                 self._extract_entities(state.get("embedding_chunks")),

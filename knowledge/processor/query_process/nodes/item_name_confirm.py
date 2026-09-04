@@ -216,11 +216,15 @@ class ItemNameExtractor:
      询问场景：（多级循环） 请问RS12-万用表和RS-13万用表分别如何测量电阻。---->>LLM---->商品名：[RS12-万用表,RS-13万用表，RS-DDD测量电阻]---confirm[RS12-万用表，,RS-13万用表,RS-DDD测量电阻:误判不能留]
     """
 
-    def extract_item_name(self, original_query: str, history_text: str) -> Dict[str, Any]:
+    def extract_item_name(self, original_query: str, history_text: str,
+                          temperature: float = 0.0) -> Dict[str, Any]:
         """
         LLM根据用户原始问题提取商品名
+
         Args:
-            original_query:
+            original_query: 用户原始查询
+            history_text: 对话历史文本
+            temperature: LLM 生成温度，0.0 为最确定（默认），可调高以增加多样性
 
         Returns:
 
@@ -228,8 +232,8 @@ class ItemNameExtractor:
 
         result: Dict[str, Any] = {"item_names": [], "rewritten_query": original_query}
 
-        # 1. 获取LLM客户端
-        llm_client = get_llm_client(response_format=True)
+        # 1. 获取LLM客户端（允许调用方控制 temperature）
+        llm_client = get_llm_client(response_format=True, temperature=temperature)
         if llm_client is None:
             return result
 
@@ -365,10 +369,11 @@ class ItemNameConfirmNode(BaseNode):
 
     def _decide(self, state: QueryGraphState, item_names: List[str], confirmed: List[str],
                 options: List[str], rewritten_query: str):
+        # 在所有分支中统一设置 rewritten_query，防止多轮对话中残留旧值
+        state['rewritten_query'] = rewritten_query
 
         if confirmed:
             # 明确匹配到产品 → 带产品名继续检索
-            state['rewritten_query'] = rewritten_query
             state['item_names'] = confirmed
 
         elif options:

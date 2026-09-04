@@ -4,9 +4,9 @@
 """
 
 import os
-from typing import List, Optional
+from typing import List
 
-from knowledge.processor.query_process.base import BaseNode, setup_logging
+from knowledge.processor.query_process.base import BaseNode, setup_logging, build_filter_expr
 from knowledge.processor.query_process.state import QueryGraphState
 
 
@@ -47,7 +47,7 @@ class SearchEmbeddingNode(BaseNode):
             self.logger.error("查询向量化失败")
             return {"embedding_chunks": []}
 
-        filter_expr = self._build_filter_expr(item_names)
+        filter_expr = build_filter_expr(item_names)
         self.logger.debug(f"过滤表达式: {filter_expr}")
 
         reqs = create_hybrid_search_requests(
@@ -81,13 +81,6 @@ class SearchEmbeddingNode(BaseNode):
         self.log_step("step_3", f"搜索完成，返回 {len(chunks)} 条结果")
 
         return {"embedding_chunks": chunks}
-
-    @staticmethod
-    def _build_filter_expr(item_names: Optional[List[str]]) -> Optional[str]:
-        if not item_names:
-            return None
-        quoted = ", ".join(f'"{v}"' for v in item_names)
-        return f"item_name in [{quoted}]"
 
 
 _node_instance = SearchEmbeddingNode()

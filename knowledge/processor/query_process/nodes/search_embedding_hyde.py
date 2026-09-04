@@ -6,9 +6,9 @@
 
 import os
 import re
-from typing import List, Optional
+from typing import List
 
-from knowledge.processor.query_process.base import BaseNode, setup_logging
+from knowledge.processor.query_process.base import BaseNode, setup_logging, build_filter_expr
 from knowledge.processor.query_process.state import QueryGraphState
 from knowledge.prompts.query.query_prompt import HYDE_PROMPT_TEMPLATE
 
@@ -51,6 +51,11 @@ class SearchEmbeddingHydeNode(BaseNode):
         from knowledge.tools.llm_utils import get_llm_client
 
         llm = get_llm_client()
+        if llm is None:
+            # LLM 未配置时无法生成假设文档，返回空字符串使后续降级为纯查询检索
+            self.logger.warning("LLM 未配置，HyDE 降级为纯查询检索")
+            return ""
+
         prompt = HYDE_PROMPT_TEMPLATE.format(query=query)
         raw = llm.invoke(prompt).content
 
@@ -72,7 +77,8 @@ class SearchEmbeddingHydeNode(BaseNode):
             execute_hybrid_search_query,
         )
 
-        combined_text = f"{query} {hyde_doc}"
+        # 使用分隔符拼接，避免 query 和 hyde_doc 的向量互相干扰
+        combined_text = f"Query: {query}\n\nHypothetical document: {hyde_doc}"
 
         embedding_model = get_bge_m3_model()
         if embedding_model is None:
@@ -90,7 +96,7 @@ class SearchEmbeddingHydeNode(BaseNode):
             sparse_vector=embeddings["sparse"][0],
             dense_params={"metric_type": "IP"},
             sparse_params={"metric_type": "IP"},
-            expr=self._build_filter_expr(item_names),
+            expr=build_filter_expr(item_names),
             limit=self.SEARCH_TOP_K,
         )
 
@@ -109,13 +115,6 @@ class SearchEmbeddingHydeNode(BaseNode):
         )
 
         return res[0] if res else []
-
-    @staticmethod
-    def _build_filter_expr(item_names: Optional[List[str]]) -> Optional[str]:
-        if not item_names:
-            return None
-        quoted = ", ".join(f'"{v}"' for v in item_names)
-        return f"item_name in [{quoted}]"
 
 
 _node_instance = SearchEmbeddingHydeNode()

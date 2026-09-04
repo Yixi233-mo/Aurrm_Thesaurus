@@ -10,7 +10,7 @@ import re
 import logging
 from typing import List, Dict, Any, Set, Tuple, Optional
 
-from knowledge.processor.query_process.base import BaseNode, setup_logging
+from knowledge.processor.query_process.base import BaseNode, setup_logging, build_filter_expr
 from knowledge.processor.query_process.state import QueryGraphState
 from knowledge.prompts.query.query_prompt import ENTITY_EXTRACT_SYSTEM_PROMPT
 
@@ -44,15 +44,14 @@ class QueryKgNode(BaseNode):
     def process(self, state: QueryGraphState) -> QueryGraphState:
         from knowledge.tools.llm_utils import get_llm_client
 
-        question = state.get("rewritten_query") or state.get("original_query", "")
+        # 保留原始查询用于实体抽取（含商品名的完整问题才能抽到"电池"等关联实体）
+        question_for_entity = state.get("rewritten_query") or state.get("original_query", "")
         item_names = self._clean_item_names(state.get("item_names"))
-
-        for name in item_names:
-            question = question.replace(name, "")
 
         self.log_step("step_1", "LLM 抽取实体")
         llm_client = get_llm_client(response_format=True)
-        entities = self._extract_entities(question, llm_client) if llm_client else []
+        # 用含商品名的完整查询抽取实体，避免丢失关联实体（如"电池"）
+        entities = self._extract_entities(question_for_entity, llm_client) if llm_client else []
 
         self.log_step("step_2", "Milvus 对齐实体")
         align_result = self._align_entities(entities, item_names) if entities else {"aligned_entities": [], "alignments": []}
@@ -153,7 +152,7 @@ class QueryKgNode(BaseNode):
         collection = os.getenv("ENTITY_NAME_COLLECTION", "kb_graph_entity_names")
         client = get_milvus_client()
         min_score = float(os.getenv("KG_ENTITY_ALIGN_MIN_SCORE", str(self.KG_ENTITY_ALIGN_MIN_SCORE)))
-        expr = self._build_filter_expr(item_names)
+        expr = build_filter_expr(item_names)
 
         embedding_model = get_bge_m3_model()
         if embedding_model is None:
@@ -242,7 +241,11 @@ class QueryKgNode(BaseNode):
     def _find_seed_nodes(
         self, entities: List[str], item_names: List[str],
     ) -> List[Dict]:
-        if not entities or not item_names:
+        if not entities:
+            self.logger.info("无实体可查询（LLM 未抽取到任何实体），跳过 Neo4j 查找")
+            return []
+        if not item_names:
+            self.logger.info("无商品名限制（item_names 为空），跳过 Neo4j 查找以避免全库扫描")
             return []
 
         try:
@@ -504,14 +507,6 @@ class QueryKgNode(BaseNode):
                 docs.append(doc)
 
         return docs
-
-    @staticmethod
-    def _build_filter_expr(item_names: Optional[List[str]]) -> Optional[str]:
-        if not item_names:
-            return None
-        quoted = ", ".join(f'"{v}"' for v in item_names)
-        return f"item_name in [{quoted}]"
-
 
 _node_instance = QueryKgNode()
 

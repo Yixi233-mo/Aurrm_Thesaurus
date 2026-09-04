@@ -139,3 +139,18 @@ def setup_logging(level: int = logging.INFO):
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
+
+
+def build_filter_expr(item_names: Optional[List[str]]) -> Optional[str]:
+    """构建 Milvus 过滤表达式（统一实现，三处节点共用）。
+
+    Args:
+        item_names: 商品名称列表，为空时返回 None（不过滤）。
+
+    Returns:
+        Milvus 过滤表达式字符串，或 None。
+    """
+    if not item_names:
+        return None
+    quoted = ", ".join(f'"{v}"' for v in item_names)
+    return f"item_name in [{quoted}]"
