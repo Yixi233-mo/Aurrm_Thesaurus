@@ -52,5 +52,4 @@ docs/item_names.txt
 knowledge/docs/item_names.txt
 
 # Local docs (not committed to git)
-import/
 .git_filter_rules
