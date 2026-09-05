@@ -18,13 +18,13 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/query': 'http://127.0.0.1:8001',
-      '/history': 'http://127.0.0.1:8001',
-      '/stream': 'http://127.0.0.1:8001',
+      '/query': 'http://127.0.0.1:8002',
+      '/history': 'http://127.0.0.1:8002',
+      '/stream': 'http://127.0.0.1:8002',
       '/upload': 'http://127.0.0.1:8000',
       '/status': 'http://127.0.0.1:8000',
-      '/docs': 'http://127.0.0.1:8001',
-      '/openapi.json': 'http://127.0.0.1:8001',
+      '/docs': 'http://127.0.0.1:8002',
+      '/openapi.json': 'http://127.0.0.1:8002',
     },
   },
 })

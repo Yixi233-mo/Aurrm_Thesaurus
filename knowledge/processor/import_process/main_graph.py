@@ -16,6 +16,7 @@ from knowledge.processor.import_process.state import ImportGraphState, create_de
 from knowledge.processor.import_process.nodes import (
     EntryNode,
     PdfToMdNode,
+    HtmlToMdNode,
     MdImgNode,
     DocumentSplitNode,
     ItemNameRecognitionNode,
@@ -29,7 +30,7 @@ def route_after_entry(state: ImportGraphState) -> str:
     """
     入口节点后的路由逻辑
 
-    根据文件类型决定走 PDF 转换分支还是直接处理 MD 分支
+    根据文件类型决定走 PDF 转换、HTML 转换还是直接处理 MD 分支
 
     Args:
         state: 当前图状态
@@ -37,10 +38,12 @@ def route_after_entry(state: ImportGraphState) -> str:
     Returns:
         下一个节点名称
     """
-    if state.get("is_md_read_enabled"):
-        return "md_img"
     if state.get("is_pdf_read_enabled"):
         return "pdf_to_md"
+    if state.get("is_html_read_enabled"):
+        return "html_to_md"
+    if state.get("is_md_read_enabled"):
+        return "md_img"
     return END
 
 
@@ -55,6 +58,8 @@ def create_import_graph() -> StateGraph:
         entry
           │
           ├── (PDF) ──> pdf_to_md ──┐
+          │                         │
+          ├── (HTML) ─> html_to_md ─┤
           │                         │
           └── (MD) ────────────────>├──> md_img
                                     │
@@ -84,6 +89,7 @@ def create_import_graph() -> StateGraph:
     nodes = {
         "entry": EntryNode(),
         "pdf_to_md": PdfToMdNode(),
+        "html_to_md": HtmlToMdNode(),
         "md_img": MdImgNode(),
         "document_split": DocumentSplitNode(),
         "item_name_recognition": ItemNameRecognitionNode(),
@@ -104,14 +110,16 @@ def create_import_graph() -> StateGraph:
         "entry",
         route_after_entry,
         {
-            "md_img": "md_img",
             "pdf_to_md": "pdf_to_md",
+            "html_to_md": "html_to_md",
+            "md_img": "md_img",
             END: END
         }
     )
 
     # 6. 添加顺序边
     workflow.add_edge("pdf_to_md", "md_img")
+    workflow.add_edge("html_to_md", "md_img")
     workflow.add_edge("md_img", "document_split")
     workflow.add_edge("document_split", "item_name_recognition")
     workflow.add_edge("item_name_recognition", "bge_embedding")
@@ -133,7 +141,7 @@ def run_import(file_dir: str = "", import_file_path: str = "") -> dict:
 
     Args:
         file_dir: 本地工作目录
-        import_file_path: 输入文件路径（PDF 或 MD）
+        import_file_path: 输入文件路径（PDF / HTML / MD）
 
     Returns:
         最终状态字典

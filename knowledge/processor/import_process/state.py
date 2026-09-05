@@ -24,11 +24,13 @@ class ImportGraphState(TypedDict, total=False):
     # ==================== 控制标志 ====================
     is_md_read_enabled: bool        # 是否启用 MD 读取
     is_pdf_read_enabled: bool       # 是否启用 PDF 读取
+    is_html_read_enabled: bool      # 是否启用 HTML 读取
 
     # ==================== 路径信息 ====================
     import_file_path: str           # 导入文件路径（原始输入）
     file_dir: str                   # 导入(出)文件目录
     pdf_path: str                   # PDF 文件路径
+    html_path: str                  # HTML 文件路径
     md_path: str                    # 转换后 Markdown 文件路径
 
     # ==================== 文件信息 ====================
@@ -45,9 +47,11 @@ GRAPH_DEFAULT_STATE: ImportGraphState = {
     "task_id": "",
     "is_pdf_read_enabled": False,
     "is_md_read_enabled": False,
+    "is_html_read_enabled": False,
     "file_dir": "",
     "import_file_path": "",
     "pdf_path": "",
+    "html_path": "",
     "md_path": "",
     "file_title": "",
     "md_content": "",

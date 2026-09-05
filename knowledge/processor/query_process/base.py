@@ -6,7 +6,7 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import TypeVar, Optional
+from typing import TypeVar, Optional, List
 import logging
 
 from knowledge.processor.query_process.config import QueryConfig, get_config

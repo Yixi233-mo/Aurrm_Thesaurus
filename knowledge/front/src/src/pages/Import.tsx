@@ -112,7 +112,7 @@ export function ImportPage() {
           </div>
           <div>
             <h1 className="text-sm font-bold text-[var(--skin-accent-warm)]" style={{ fontFamily: 'var(--font-display)' }}>文档导入</h1>
-            <p className="text-[11px] text-[var(--theme-text-secondary)]">上传 PDF / Markdown 文件，自动解析并入库</p>
+            <p className="text-[11px] text-[var(--theme-text-secondary)]">上传 PDF / Markdown / HTML 文件，自动解析并入库</p>
           </div>
         </div>
         <ThemeToggle />

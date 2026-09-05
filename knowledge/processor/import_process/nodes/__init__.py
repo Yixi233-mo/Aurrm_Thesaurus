@@ -1,5 +1,6 @@
 from knowledge.processor.import_process.nodes.entry import EntryNode
 from knowledge.processor.import_process.nodes.pdf_to_md import PdfToMdNode
+from knowledge.processor.import_process.nodes.html_to_md import HtmlToMdNode
 from knowledge.processor.import_process.nodes.md_img import MdImgNode
 from knowledge.processor.import_process.nodes.document_split import DocumentSplitNode
 from knowledge.processor.import_process.nodes.item_name_recognition import ItemNameRecognitionNode
@@ -10,6 +11,7 @@ from knowledge.processor.import_process.nodes.knowledge_graph import KnowledgeGr
 __all__ = [
     "EntryNode",
     "PdfToMdNode",
+    "HtmlToMdNode",
     "MdImgNode",
     "DocumentSplitNode",
     "ItemNameRecognitionNode",

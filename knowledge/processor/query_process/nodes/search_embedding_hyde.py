@@ -6,7 +6,7 @@
 
 import os
 import re
-from typing import List
+from typing import List, Optional
 
 from knowledge.processor.query_process.base import BaseNode, setup_logging, build_filter_expr
 from knowledge.processor.query_process.state import QueryGraphState

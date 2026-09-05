@@ -60,6 +60,10 @@ class EntryNode(BaseNode):
             self.logger.info("启用 PDF 读取流程")
             state["is_pdf_read_enabled"] = True
             state["pdf_path"] = file_path
+        elif suffix in (".html", ".htm"):
+            self.logger.info("启用 HTML 读取流程")
+            state["is_html_read_enabled"] = True
+            state["html_path"] = file_path
         elif suffix == ".md":
             self.logger.info("启用 MD 读取流程")
             state["is_md_read_enabled"] = True
@@ -130,4 +134,15 @@ if __name__ == '__main__':
     result_other = entry_node.process(state_other)
     print(json.dumps(result_other, indent=4, ensure_ascii=False))
     print(f"is_pdf_read_enabled: {result_other.get('is_pdf_read_enabled', False)}")
+    print(f"is_html_read_enabled: {result_other.get('is_html_read_enabled', False)}")
     print(f"is_md_read_enabled: {result_other.get('is_md_read_enabled', False)}")
+
+    # 测试用例 5: HTML 文件
+    print("\n--- 测试用例 5: HTML 文件 ---")
+    state_html = {
+        "import_file_path": "E:/课件资料/report.html"
+    }
+    result_html = entry_node.process(state_html)
+    print(json.dumps(result_html, indent=4, ensure_ascii=False))
+    print(f"is_html_read_enabled: {result_html.get('is_html_read_enabled', False)}")
+    print(f"html_path: {result_html.get('html_path', '')}")

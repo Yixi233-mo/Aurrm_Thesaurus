@@ -20,3 +20,7 @@ pymongo                  # MongoDB 驱动
 python-dotenv            # 环境变量管理
 requests                 # HTTP 客户端（MinerU 云端 API）
 openai-agents            # OpenAI Agent 框架（MCP 协议支持）
+
+# HTML 解析依赖
+beautifulsoup4           # HTML 清理与解析
+html2text                # HTML → Markdown 转换

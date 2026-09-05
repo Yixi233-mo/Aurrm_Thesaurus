@@ -48,7 +48,7 @@ def _detect_provider(api_base: str) -> str:
         return "deepseek"
     if "openai.com" in base:
         return "openai"
-    if "zhipuai" in base:
+    if "bigmodel" in base or "zhipu" in base:
         return "zhipu"
     if "api.stepfun" in base:
         return "stepfun"
@@ -96,11 +96,11 @@ def get_llm_client(mode_name: str = None, temperature: float = 0.0, response_for
         logger.error(f"缺少环境变量: {', '.join(missing)}，请在 .env 中配置")
         return None
 
-    # 2. 模型名优先级：mode_name > LLM_MODEL > ITEM_MODEL > 自动检测
+    # 2. 模型名优先级：mode_name > LLM_DEFAULT_MODEL > ITEM_MODEL > 自动检测
     provider = _detect_provider(api_base)
     model_name = (
         mode_name
-        or os.getenv('LLM_MODEL')
+        or os.getenv('LLM_DEFAULT_MODEL')
         or os.getenv('ITEM_MODEL')
         or _default_model_for(provider)
     )
@@ -123,7 +123,8 @@ def get_llm_client(mode_name: str = None, temperature: float = 0.0, response_for
             openai_api_base=api_base,
             temperature=temperature,
             extra_body={"enable_thinking": False},
-            model_kwargs=model_kwargs
+            model_kwargs=model_kwargs,
+            openai_proxy=None,       # 禁用系统代理，避免 Connection error
         )
 
         # 5. 用信号量包装后缓存
